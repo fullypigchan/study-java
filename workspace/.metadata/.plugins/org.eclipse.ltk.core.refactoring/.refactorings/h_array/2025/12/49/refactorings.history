@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename package &apos;stringTestt&apos; to &apos;stringTest&apos;&#x0D;&#x0A;- Original project: &apos;h_array&apos;&#x0D;&#x0A;- Original element: &apos;h_array/src/stringTestt&apos;&#x0D;&#x0A;- Renamed element: &apos;h_array/src/stringTest&apos;&#x0D;&#x0A;- Update references to refactored element&#x0D;&#x0A;- Update textual occurrences in comments and strings" description="Rename package &apos;stringTestt&apos;" flags="589830" hierarchical="false" id="org.eclipse.jdt.ui.rename.package" input="/src&lt;stringTestt" name="stringTest" qualified="false" references="true" stamp="1764721345960" textual="false" version="1.0"/>
+</session>

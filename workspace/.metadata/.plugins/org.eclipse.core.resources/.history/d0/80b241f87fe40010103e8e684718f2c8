@@ -1,0 +1,454 @@
+package com.app.repository;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.app.config.DBConnecter;
+import com.app.domain.OrderDetailVO;
+import com.app.domain.OrderItemVO;
+import com.app.domain.OrderVO;
+import com.app.domain.ProductVO;
+import com.app.enumeration.OrderStatus;
+
+public class OrderDAO {
+	private Connection connection;
+	private PreparedStatement preparedStatement;
+	private ResultSet resultSet;
+
+//10. 주문 생성 (주문 정보만)
+	public Long createOrder(OrderVO order) {
+		StringBuilder stringBuilder = new StringBuilder();
+		String query = null;
+
+		stringBuilder.append("insert into tbl_order ");
+		stringBuilder.append("(customer_name, customer_email, total_amount, order_status) ");
+		stringBuilder.append("values(?,?,?,?) ");
+
+		query = stringBuilder.toString();
+
+		connection = DBConnecter.getConnection();
+
+		try {
+			preparedStatement = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+			preparedStatement.setString(1, order.getCustomerName());
+			preparedStatement.setString(2, order.getCustomerEmail());
+			preparedStatement.setInt(3, order.getTotalAmount());
+			preparedStatement.setString(4, order.getOrderStatus().getValue());
+			preparedStatement.executeUpdate();
+			resultSet = preparedStatement.getGeneratedKeys();
+
+			if (resultSet.next()) {
+				return resultSet.getLong(1);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("createOrder(OrderVO) SQL문 오류");
+		} finally {
+			try {
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				if (preparedStatement != null) {
+					preparedStatement.close();
+				}
+				if (connection != null) {
+					connection.close();
+				}
+			} catch (SQLException e) {
+				e.printStackTrace();
+				throw new RuntimeException();
+			}
+
+		}
+		return null;
+	}
+
+//11. 주문에 상품 추가
+	public Long addOrderItem(OrderItemVO orderItem) {
+		StringBuilder stringBuilder = new StringBuilder();
+		String query = null;
+
+		stringBuilder.append("insert into tbl_order_item ");
+		stringBuilder.append("(order_id, product_id, quantity, price) ");
+		stringBuilder.append("values(?,?,?,?) ");
+
+		query = stringBuilder.toString();
+
+		connection = DBConnecter.getConnection();
+
+		try {
+			preparedStatement = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+			preparedStatement.setLong(1, orderItem.getOrderId());
+			preparedStatement.setLong(2, orderItem.getProductId());
+			preparedStatement.setInt(3, orderItem.getQuantity());
+			preparedStatement.setInt(4, orderItem.getPrice());
+			preparedStatement.executeUpdate();
+			resultSet = preparedStatement.getGeneratedKeys();
+
+			if (resultSet.next()) {
+				return resultSet.getLong(1);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("addOrderItem(OrderItemVO) SQL문 오류");
+		} finally {
+			try {
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				if (preparedStatement != null) {
+					preparedStatement.close();
+				}
+				if (connection != null) {
+					connection.close();
+				}
+			} catch (SQLException e) {
+				e.printStackTrace();
+				throw new RuntimeException();
+			}
+
+		}
+		return null;
+	}
+
+//12. 주문 상태 변경
+	public int updateOrderStatus(Long orderId, OrderStatus newStatus) {
+		StringBuilder stringBuilder = new StringBuilder();
+		String query = null;
+
+		stringBuilder.append("update tbl_order ");
+		stringBuilder.append("set order_status = ? ");
+		stringBuilder.append("where id = ? ");
+
+		query = stringBuilder.toString();
+
+		connection = DBConnecter.getConnection();
+
+		try {
+			preparedStatement = connection.prepareStatement(query);
+			preparedStatement.setString(1, newStatus.getValue());
+			preparedStatement.setLong(2, orderId);
+			preparedStatement.executeUpdate();
+
+			int result = preparedStatement.executeUpdate(); // ✅ int로 받기
+			return result; // ✅ 영향받은 행 개수 반환
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("updateOrderStatus(Long) SQL문 오류");
+		} finally {
+			try {
+
+				if (preparedStatement != null) {
+					preparedStatement.close();
+				}
+				if (connection != null) {
+					connection.close();
+				}
+			} catch (SQLException e) {
+				e.printStackTrace();
+				throw new RuntimeException();
+			}
+
+		}
+		return 0;
+	}
+
+	// 13. 특정 주문의 전체 정보 조회 (JOIN 3개 테이블)
+	public List<OrderDetailVO> findOrderDetailsById(Long orderId) {
+		StringBuilder stringBuilder = new StringBuilder();
+		String query = null;
+		OrderDetailVO detail = null;
+		List<OrderDetailVO> details = new ArrayList<>();
+
+		stringBuilder.append(
+				"select o.id AS order_id, o.customer_name, o.customer_email, o.total_amount, o.order_status, o.created AS order_created, ");
+		stringBuilder.append("oi.id AS order_item_id, oi.quantity, oi.price AS item_price, ");
+		stringBuilder.append("p.id AS product_id, p.product_name, p.category ");
+		stringBuilder.append("from tbl_order o "); // ✅ 메인 테이블을 먼저 쓰는 게 일반적
+		stringBuilder.append("inner join tbl_order_item oi on o.id = oi.order_id ");
+		stringBuilder.append("inner join tbl_product p on oi.product_id = p.id ");
+		stringBuilder.append("where o.id = ? ");
+
+		query = stringBuilder.toString();
+
+		connection = DBConnecter.getConnection();
+
+		try {
+			preparedStatement = connection.prepareStatement(query);
+			preparedStatement.setLong(1, orderId);
+			resultSet = preparedStatement.executeQuery();
+
+			while (resultSet.next()) {
+				detail = new OrderDetailVO();
+
+				// Order 정보
+				detail.setOrderId(resultSet.getLong("order_id"));
+				detail.setCustomerName(resultSet.getString("customer_name"));
+				detail.setCustomerEmail(resultSet.getString("customer_email"));
+				detail.setTotalAmount(resultSet.getInt("total_amount"));
+				detail.setOrderStatus(resultSet.getString("order_status"));
+				detail.setOrderCreated(resultSet.getString("order_created"));
+
+				// OrderItem 정보
+				detail.setOrderItemId(resultSet.getLong("order_item_id"));
+				detail.setQuantity(resultSet.getInt("quantity"));
+				detail.setItemPrice(resultSet.getInt("item_price"));
+
+				// Product 정보
+				detail.setProductId(resultSet.getLong("product_id"));
+				detail.setProductName(resultSet.getString("product_name"));
+				detail.setCategory(resultSet.getString("category"));
+
+				details.add(detail);
+			}
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("findOrderDetailsById(Long) SQL문 오류");
+		} finally {
+			try {
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				if (preparedStatement != null) {
+					preparedStatement.close();
+				}
+				if (connection != null) {
+					connection.close();
+				}
+			} catch (SQLException e) {
+				e.printStackTrace();
+				throw new RuntimeException(e);
+			}
+		}
+
+		return details;
+	}
+
+//14. 고객 이메일로 주문 내역 조회
+	public List<OrderVO> findOrdersByEmail(String email) {
+		StringBuilder stringBuilder = new StringBuilder();
+		String query = null;
+		OrderVO order = null;
+		List<OrderVO> orders = new ArrayList<>();
+
+		stringBuilder.append("select id, customer_name, customer_email, total_amount, order_status, created, updated ");
+		stringBuilder.append("from tbl_order ");
+		stringBuilder.append("where customer_email = ? ");
+		query = stringBuilder.toString();
+
+		connection = DBConnecter.getConnection();
+
+		try {
+			preparedStatement = connection.prepareStatement(query);
+			preparedStatement.setString(1, email);
+			resultSet = preparedStatement.executeQuery();
+
+			while (resultSet.next()) {
+				order = new OrderVO();
+				order.setId(resultSet.getLong("id"));
+				order.setCustomerName(resultSet.getString("customer_name"));
+				order.setCustomerEmail(resultSet.getString("customer_email"));
+				order.setTotalAmount(resultSet.getInt("total_amount"));
+				order.setOrderStatus(resultSet.getString("order_status"));
+				order.setCreated(resultSet.getString("created"));
+				order.setUpdated(resultSet.getString("updated"));
+				orders.add(order);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("findOrdersByEmail(String) SQL문 오류");
+		} finally {
+			try {
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				if (preparedStatement != null) {
+					preparedStatement.close();
+				}
+				if (connection != null) {
+					connection.close();
+				}
+			} catch (SQLException e) {
+				e.printStackTrace();
+				throw new RuntimeException();
+			}
+
+		}
+		return orders;
+
+	}
+
+//15. 특정 상태의 주문 조회
+	public List<OrderVO> findOrdersByStatus(OrderStatus status) {
+		StringBuilder stringBuilder = new StringBuilder();
+		String query = null;
+		OrderVO order = null;
+		List<OrderVO> orders = new ArrayList<>();
+
+		stringBuilder.append("select id, customer_name, customer_email, total_amount, order_status, created, updated ");
+		stringBuilder.append("from tbl_order ");
+		stringBuilder.append("where order_status = ? ");
+		stringBuilder.append("order by created desc"); // 최신순으로 나열
+		query = stringBuilder.toString();
+
+		connection = DBConnecter.getConnection();
+
+		try {
+			preparedStatement = connection.prepareStatement(query);
+			preparedStatement.setString(1, status.getValue());
+			resultSet = preparedStatement.executeQuery();
+
+			while (resultSet.next()) {
+				order = new OrderVO();
+				order.setId(resultSet.getLong("id"));
+				order.setCustomerName(resultSet.getString("customer_name"));
+				order.setCustomerEmail(resultSet.getString("customer_email"));
+				order.setTotalAmount(resultSet.getInt("total_amount"));
+				order.setOrderStatus(resultSet.getString("order_status"));
+				order.setCreated(resultSet.getString("created"));
+				order.setUpdated(resultSet.getString("updated"));
+				orders.add(order);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("findOrdersByStatus(OrderStatus) SQL문 오류");
+		} finally {
+			try {
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				if (preparedStatement != null) {
+					preparedStatement.close();
+				}
+				if (connection != null) {
+					connection.close();
+				}
+			} catch (SQLException e) {
+				e.printStackTrace();
+				throw new RuntimeException();
+			}
+
+		}
+		return orders;
+
+	}
+
+//16. 특정 기간 주문 조회 (BETWEEN, DATE 함수)
+//3. 다양한 날짜 함수들
+//sql-- 오늘 날짜
+//SELECT CURDATE();
+//-- 결과: '2024-12-28'
+//-- 현재 날짜+시간
+//SELECT NOW();
+//-- 결과: '2024-12-28 14:30:25'
+//-- 년도 추출
+//SELECT YEAR(created) FROM tbl_order;
+//-- 결과: 2024
+//-- 월 추출
+//SELECT MONTH(created) FROM tbl_order;
+//-- 결과: 12
+//-- 일 추출
+//SELECT DAY(created) FROM tbl_order;
+//-- 결과: 28
+//-- 날짜 계산
+//SELECT DATE_ADD(CURDATE(), INTERVAL 7 DAY);
+//-- 결과: 오늘로부터 7일 후
+//SELECT DATE_SUB(CURDATE(), INTERVAL 1 MONTH);
+//-- 결과: 한 달 전
+	public List<OrderVO> findOrdersByDateRange(String startDate, String endDate) {
+		StringBuilder stringBuilder = new StringBuilder();
+		String query = null;
+		OrderVO order = null;
+		List<OrderVO> orders = new ArrayList<>();
+
+		stringBuilder.append("select id, customer_name, customer_email, total_amount, order_status, created, updated ");
+		stringBuilder.append("from tbl_order ");
+		stringBuilder.append("where date(created) between ? and ? ");
+		stringBuilder.append("order by created desc ");
+
+		query = stringBuilder.toString();
+
+		connection = DBConnecter.getConnection();
+
+		try {
+			preparedStatement = connection.prepareStatement(query);
+			preparedStatement.setString(1, startDate); // '2024-12-01'
+			preparedStatement.setString(2, endDate); // '2024-12-31'
+			resultSet = preparedStatement.executeQuery();
+
+			while (resultSet.next()) {
+				order = new OrderVO();
+				order.setId(resultSet.getLong("id"));
+				order.setCustomerName(resultSet.getString("customer_name"));
+				order.setCustomerEmail(resultSet.getString("customer_email"));
+				order.setTotalAmount(resultSet.getInt("total_amount"));
+				order.setOrderStatus(resultSet.getString("order_status"));
+				order.setCreated(resultSet.getString("created"));
+				order.setUpdated(resultSet.getString("updated"));
+				orders.add(order);
+			}
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				if (preparedStatement != null) {
+					preparedStatement.close();
+				}
+				if (connection != null) {
+					connection.close();
+				}
+			} catch (SQLException e) {
+				e.printStackTrace();
+				throw new RuntimeException();
+			}
+
+		}
+
+		return orders;
+
+	}
+
+//17. 가장 많이 팔린 상품 TOP N (GROUP BY, ORDER BY, LIMIT)
+	public List<Map<String, Object>> findTopSellingProducts(int limit) {
+		StringBuilder stringBuilder = new StringBuilder();
+		String query = null;
+		stringBuilder.append(
+				"select p.id, p.product_name,sum(oi.quantity) as total_quantity,sum(oi.quantity * oi.price) as total_sales ");
+		stringBuilder.append("from tbl_order_item oi join tbl_product p ");
+		stringBuilder.append("on oi.product_id = p.id join tbl_order o ");
+		stringBuilder.append("on oi.order_id = o.id ");
+		stringBuilder.append("where o.order_status != '취소됨' ");
+		stringBuilder.append("group by p.id, p.product_name ");
+		stringBuilder.append("order by total_quantity desc ");
+		stringBuilder.append("limit ? ");
+		
+		query = stringBuilder.toString();
+		
+		connection = DBConnecter.getConnection();
+		
+		
+	}
+////반환: [{product_id, product_name, total_quantity, total_sales}, ...]
+////18. 고객별 총 주문금액 (GROUP BY)
+//List<Map<String, Object>> findTotalAmountByCustomer()
+////반환: [{customer_name, customer_email, total_amount, order_count}, ...]
+////19. 특정 상품이 포함된 모든 주문 조회 (서브쿼리 또는 JOIN)
+//List<OrderVO> findOrdersByProductId(Long productId)
+////20. 총 매출액 계산 (SUM)
+//int getTotalSales()
+////21. 특정 날짜의 매출액
+//int getSalesByDate(String date)
+////22. 주문 취소 (상태 변경 + 재고 복구) - 트랜잭션 필요!
+//boolean cancelOrder(Long orderId)
+}

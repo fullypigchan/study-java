@@ -1,0 +1,35 @@
+함수형 인터페이스(Functional Interface)
+	인터페이스 중 추상 메소드를 하나만 가지고 있는 인터페이스를 함수형 인터페이스 라고 한다.
+	이 때 @FunctionalInterface를 인터페이스 위에 작성하여 단 하나의 추상 메소드만 선언하도록 한다.
+
+람다식(Lamda Expression)
+	함수형 인터페이스에서는 한 개의 추상 메소드만 존재하기 때문에 구현 시 메소드 이름이 딱히 필요가 없다.
+	람다식은 이름이 없는 메소드로서, 값처럼 사용이 가능하고 당연히 매개변수로도 전달이 가능하다.
+	따라서 람다식을 익명 메소드(Anonymous Method)라고도 부른다.
+
+람다식 문법
+		구현
+	1. (매개변수 형식 나열) -> 리턴값;
+	2. (매개변수 형식 나열) -> {실행할 문장; return 리턴값;};
+	3. 매개변수 -> 리턴값;
+	4. 매개변수 -> {실행할 문장; return 리턴값;};
+	5. 참조형(::)
+		생성자 참조
+			클래스명::new
+		메소드 참조
+			static, 접근한 객체의 메소드:	클래스명::메소드명
+			일반:			객체명::메소드명	
+
+
+[실습]
+ package는 lambdaTask로 선언한다.
+   
+   PrintName 인터페이스 선언
+   String getFullName(String, String) 추상 메소드 선언
+   - 성과 이름을 전달받는다.
+
+   PrintNameTest 클래스 선언
+   void printFullName(PrintName, String, String) 메소드 선언
+   - 외부에서 구현된 PrintName을 전달받은 뒤 전체 이름을 출력
+
+   main 메소드에서 printFullName()을 사용하여 테스트 진행

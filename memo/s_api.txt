@@ -1,0 +1,10 @@
+API(Application Programming Interface)
+	개발에 필요한 라이브러리들의 집합.
+	선배 개발자들이 만들어놓은 소스코드의 집합.
+
+	-내부 API
+		JDK 설치 시 제공해주는 기본 API
+	
+	-외부 API
+		사설 업체에서 개발한 패키지 및 클래스를 의미한다.
+		보통 JAR 파일로 배포하며 자바 프로젝트의 build path에 추가해서 사용한다.
